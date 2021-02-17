@@ -2,15 +2,17 @@ package com.dam2d.pedrojg2ot
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
-import com.google.gson.Gson
-import com.google.gson.JsonObject
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.cardview.widget.CardView
+import com.bumptech.glide.Glide
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import kotlinx.android.synthetic.main.activity_main.*
+import com.opencsv.CSVReader
+import java.io.InputStream
+import java.io.InputStreamReader
+import java.nio.charset.Charset
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,16 +27,29 @@ class MainActivity : AppCompatActivity() {
                 .build()
 
         service = retrofit.create<ApiService>(ApiService::class.java)
-        button.setOnClickListener {
-            getSteamUserById(76561197961885153)
+        loadChamps.setOnClickListener {
+            linearLayoutRecords.removeAllViews()
+            var ins: InputStream = getAssets().open("champions_edit.csv")
+            var reader: InputStreamReader = InputStreamReader(ins, Charset.forName("UTF-8"))
+            var csv: MutableList<Array<String>>? = CSVReader(reader).readAll()
+            for (i in 1 until csv!!.size) {
+                val cv = CardView(this)
+                val champName = csv.get(i)[1].toString()
+                val APIname = csv.get(i)[11].toString()
+                val url = "http://ddragon.leagueoflegends.com/cdn/11.3.1/img/champion/" + APIname + ".png"
+                val iv = ImageView(this)
+                Glide.with(this).load(url).into(iv)
+                val tv = TextView(this)
+                tv.textSize = 18f
+                tv.text = champName
+                cv.addView(iv)
+                cv.addView(tv)
+                linearLayoutRecords.addView(cv)
+            }
         }
-
-        //getAllPosts()
-        //getPostById()
-        //editPost()
     }
 
-    fun getSteamUserById(id: Long) {
+    /*fun getSteamUserById(id: Long) {
         var post: JsonObject? = null
         service.getSteamUserById(id).enqueue(object: Callback<JsonObject> {
             override fun onResponse(call: Call<JsonObject>?, response: Response<JsonObject>?) {
@@ -88,5 +103,5 @@ class MainActivity : AppCompatActivity() {
                 t?.printStackTrace()
             }
         })
-    }
+    }*/
 }
