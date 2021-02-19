@@ -1,19 +1,16 @@
 package com.dam2d.pedrojg2ot
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import retrofit2.Call
 import retrofit2.http.*
 
 public interface ApiService {
-    @GET("ISteamUser/GetPlayerSummaries/v0002/?key=704061DF21CF6817BA49180554881A19")
-    fun getSteamUserById(@Query("steamids") id: Long): Call<JsonObject>
+    @Headers("X-Riot-Token: RGAPI-2ebf80ce-332e-4cb0-ab84-c8571d38e779")
+    @GET("summoner/v4/summoners/by-name/{summoner}")
+    fun getSummonerId(@Path("summoner") summonerName:String):Call<JsonObject>
 
-    @GET("posts/")
-    fun getAllPosts(): Call<List<Post>>
-
-    @GET("posts/{id}")
-    fun getPostById(@Path("id") id: Int): Call<Post>
-
-    @POST("posts/{id}")
-    fun editPostById(@Path("id") id: Int, @Body post: Post?): Call<Post>
+    @Headers("X-Riot-Token: RGAPI-2ebf80ce-332e-4cb0-ab84-c8571d38e779")
+    @GET("champion-mastery/v4/champion-masteries/by-summoner/{summonerId}")
+    fun getSummonerMasteriesById(@Path("summonerId")summonerId: String): Call<JsonArray>
 }

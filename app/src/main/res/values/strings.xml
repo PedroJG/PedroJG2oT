@@ -1,3 +1,27 @@
 <resources>
     <string name="app_name">PedroJG2oT</string>
+    <string-array name="programming_languages">
+        <item>C++</item>
+        <item>C#</item>
+        <item>Java</item>
+        <item>JavaScript</item>
+        <item>Kotlin</item>
+        <item>Python</item>
+        <item>Ruby</item>
+        <item>Swift</item>
+        <item>Visual Studio</item>
+    </string-array>
+
+    <string-array name="description">
+        <item>This is a random description.</item>
+        <item>This is a random description.</item>
+        <item>This is a random description.</item>
+        <item>This is a random description.</item>
+        <item>This is a random description.</item>
+        <item>This is a random description.</item>
+        <item>This is a random description.</item>
+        <item>This is a random description.</item>
+        <item>This is a random description.</item>
+        <item>This is a random description.</item>
+    </string-array>
 </resources>

@@ -1,107 +1,145 @@
 package com.dam2d.pedrojg2ot
 
-import androidx.appcompat.app.AppCompatActivity
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
+import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.cardview.widget.CardView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.get
 import com.bumptech.glide.Glide
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import com.opencsv.CSVReader
+import kotlinx.android.synthetic.main.activity_main.*
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import kotlinx.android.synthetic.main.activity_main.*
-import com.opencsv.CSVReader
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.nio.charset.Charset
 
+
 class MainActivity : AppCompatActivity() {
 
     lateinit var service : ApiService
+    var profileIconId:String = ""
+    val champs = mutableListOf<String>()
+    val champIDs = mutableListOf<String>()
+    var top3champs:ArrayList<Champion> = arrayListOf<Champion>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
         val retrofit: Retrofit = Retrofit.Builder()
-                .baseUrl("http://api.steampowered.com/")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
+            .baseUrl("https://euw1.api.riotgames.com/lol/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
 
         service = retrofit.create<ApiService>(ApiService::class.java)
+
+        var ins: InputStream = this.getAssets().open("champions_whole.csv")
+        var reader = InputStreamReader(ins, Charset.forName("UTF-8"))
+        var csv: MutableList<Array<String>>? = CSVReader(reader).readAll()
+
+
+        for (i in 0..csv!!.size - 1) {
+            ChampionDataHolder.getInstance().addChampion(csv!!.get(i)[1], Champion(csv!!.get(i)[0], csv!!.get(i)[1], csv!!.get(i)[2], csv!!.get(i)[3], csv!!.get(i)[4], csv!!.get(i)[5], csv!!.get(i)[6], csv!!.get(i)[7]))
+
+            val champName = csv!!.get(i)[1].toString()
+            val APIname = csv!!.get(i)[3].toString()
+
+            champs.add(i, champName)
+            champIDs.add(i, APIname)
+        }
+
+        ChampionDataHolder.getInstance().names = ArrayList(champs)
+        ChampionDataHolder.getInstance().ids = ArrayList(champIDs)
+
         loadChamps.setOnClickListener {
-            linearLayoutRecords.removeAllViews()
-            var ins: InputStream = getAssets().open("champions_edit.csv")
-            var reader: InputStreamReader = InputStreamReader(ins, Charset.forName("UTF-8"))
-            var csv: MutableList<Array<String>>? = CSVReader(reader).readAll()
-            for (i in 1 until csv!!.size) {
-                val cv = CardView(this)
-                val champName = csv.get(i)[1].toString()
-                val APIname = csv.get(i)[11].toString()
-                val url = "http://ddragon.leagueoflegends.com/cdn/11.3.1/img/champion/" + APIname + ".png"
-                val iv = ImageView(this)
-                Glide.with(this).load(url).into(iv)
-                val tv = TextView(this)
-                tv.textSize = 18f
-                tv.text = champName
-                cv.addView(iv)
-                cv.addView(tv)
-                linearLayoutRecords.addView(cv)
-            }
+            val champsScreen = Intent(this, ChampListActivity::class.java)
+            startActivity(champsScreen)
+        }
+
+        go.setOnClickListener {
+            getSummonerId(input_summoner.text.toString()).toString()
         }
     }
 
-    /*fun getSteamUserById(id: Long) {
+    fun getSummonerId(summonerName:String) {
         var post: JsonObject? = null
-        service.getSteamUserById(id).enqueue(object: Callback<JsonObject> {
-            override fun onResponse(call: Call<JsonObject>?, response: Response<JsonObject>?) {
-                post = response?.body()
-                result.text = post?.toString()
-                Log.i("pedrojg", Gson().toJson(post))
+        service.getSummonerId(summonerName).enqueue(object: Callback<JsonObject> {
+            override fun onResponse(call: Call<JsonObject>, response: Response<JsonObject>) {
+                val id:String = response?.body()?.get("id").toString().replace("\"", "")
+                getSummonerMasteries(id)
+                Log.i("pedrojg", response?.body()?.get("id").toString())
+                profileIconId = response?.body()?.get("profileIconId").toString()
             }
-            override fun onFailure(call: Call<JsonObject>?, t: Throwable?) {
+
+            override fun onFailure(call: Call<JsonObject>, t: Throwable) {
                 t?.printStackTrace()
             }
         })
     }
 
-    fun getAllPosts() {
-        service.getAllPosts().enqueue(object : Callback<List<Post>> {
-            override fun onResponse(call: Call<List<Post>>?, response: Response<List<Post>>?) {
-                val posts = response?.body()
-                result.text = posts.toString()
-                Log.i("pedrojg", Gson().toJson(posts))
+    fun getSummonerMasteries(summonerId:String) {
+        var post: JsonArray? = null
+        service.getSummonerMasteriesById(summonerId).enqueue(object: Callback<JsonArray> {
+            override fun onResponse(call: Call<JsonArray>, response: Response<JsonArray>) {
+                if (response.code() == 200) {
+                    if (response.body()!!.get(0) != null) {
+                        top3champs = arrayListOf<Champion>()
+                        val bestChamp = response?.body()?.get(0) as JsonObject
+                        for (i in 0..2) {
+                            top3champs.add(ChampionDataHolder.getInstance().getChampionById((response?.body()?.get(i) as JsonObject).get("championId").toString()))
+                            top3champs.get(i).mastery = (response?.body()?.get(i) as JsonObject).get("championLevel").toString().toInt()
+                            top3champs.get(i).mastPoints = (response?.body()?.get(i) as JsonObject).get("championPoints").toString().toLong()
+                        }
+                        displayChampions()
+                    }
+                }
             }
 
-            override fun onFailure(call: Call<List<Post>>?, t: Throwable?) {
+            override fun onFailure(call: Call<JsonArray>, t: Throwable) {
                 t?.printStackTrace()
             }
         })
     }
 
-    fun getPostById() {
-        var post: Post? = null
-        service.getPostById(1).enqueue(object: Callback<Post> {
-            override fun onResponse(call: Call<Post>?, response: Response<Post>?) {
-                post = response?.body()
-                result.text = post?.title
-                Log.i("pedrojg", Gson().toJson(post))
+    fun displayChampions() {
+        var rl = resultLayout
+        for (i in 0..rl.childCount - 1) {
+            var cl:ConstraintLayout? = rl.getChildAt(i) as ConstraintLayout
+            for (j in 0..cl!!.childCount - 1) {
+                var v:View = cl.getChildAt(j)
+                v.visibility = View.VISIBLE
             }
-            override fun onFailure(call: Call<Post>?, t: Throwable?) {
-                t?.printStackTrace()
-            }
-        })
+        }
+        var counter = 1
+        for (champion:Champion in top3champs) {
+            var txtview = findViewById<TextView>(resources.getIdentifier("name"+counter.toString(), "id", packageName))
+            var mastery = findViewById<TextView>(resources.getIdentifier("mastery"+counter.toString(), "id", packageName))
+            var masteryNo = findViewById<TextView>(resources.getIdentifier("masteryNo"+counter.toString(), "id", packageName))
+            var image = findViewById<ImageView>(resources.getIdentifier("image"+counter.toString(), "id", packageName))
+
+            var icon = icon
+
+            txtview?.text = champion.getName()
+            masteryNo?.text = champion.mastery.toString()
+            mastery?.text = champion.mastPoints.toString() + " pts"
+
+            val url = "http://ddragon.leagueoflegends.com/cdn/11.3.1/img/champion/" + champion.getImage()
+            val iconUrl = "http://ddragon.leagueoflegends.com/cdn/11.4.1/img/profileicon/" + profileIconId + ".png"
+            if (image != null) Glide.with(this).load(url).into(image!!)
+
+            if (iconUrl != null) Glide.with(this).load(iconUrl).into(icon)
+
+            counter = counter + 1
+        }
     }
-
-    fun editPost() {
-        var post: Post? = Post(1, 1, "Hello k", "body")
-
-        service.editPostById(1, post).enqueue(object: Callback<Post> {
-            override fun onResponse(call: Call<Post>?, response: Response<Post>?) {
-                post = response?.body()
-            }
-
-            override fun onFailure(call: Call<Post>?, t: Throwable?) {
-                t?.printStackTrace()
-            }
-        })
-    }*/
 }
